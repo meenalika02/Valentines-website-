@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale:1.0">
+    <title>Valentine's Day Game</title>
+    <style>
+        body {
+            background-color: pink;
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        h1, h2, p {
+            color: white;
+        }
+
+        #intro, #memoryGame, #envelope {
+            margin-top: 50px;
+        }
+
+        .buttons {
+            margin-top: 20px;
+        }
+
+        .button3D {
+            padding: 20px;
+            margin: 10px;
+            font-size: 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease;
+        }
+
+        .button3D:hover {
+            transform: scale(1.1);
+        }
+
+        #memoryGame {
+            display: none;
+        }
+
+        /* Memory Game */
+        .memoryGrid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .memoryCard {
+            width: 100px;
+            height: 100px;
+            background-color: #ff4d4d;
+            color: white;
+            font-size: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .memoryCard.flipped {
+            background-color: #ffefef;
+            color: #ff4d4d;
+        }
+
+        #score {
+            color: white;
+            font-size: 24px;
+        }
+
+        #timer {
+            color: white;
+            font-size: 24px;
+        }
+
+        #winMessage {
+            color: white;
+            font-size: 24px;
+            display: none;
+        }
+
+        #envelope {
+            display: none;
+            margin-top: 20px;
+        }
+
+        #letter {
+            display: none;
+            background-color: white;
+            width: 300px;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+            box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
+            transform: rotateY(0deg);
+            transition: transform 1s ease;
+            position: relative;
+        }
+
+        #letter.open {
+            transform: rotateY(360deg);
+        }
+
+        .letterContainer {
+            background-color: #ffefef;
+            padding: 20px;
+            border-radius: 15px;
+        }
+
+        .letterContainer p {
+            color: #ff4d4d;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .heart {
+            position: absolute;
+            font-size: 40px;
+            animation: floatHearts 3s ease-in-out infinite;
+        }
+
+        @keyframes floatHearts {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            50% {
+                opacity: 0.5;
+                transform: translateY(-100px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes moveAround {
+            0% { top: 50px; left: 50px; }
+            25% { top: 100px; left: 200px; }
+            50% { top: 300px; left: 300px; }
+            75% { top: 200px; left: 500px; }
+            100% { top: 100px; left: 700px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="intro">
+        <h1>Are you ready to play the game?</h1>
+        <div class="buttons">
+            <button id="yesBtn" class="button3D">Yes</button>
+            <button id="noBtn" class="button3D">No</button>
+        </div>
+    </div>
+
+    <div id="memoryGame">
+        <h2>Memory Matching Game</h2>
+        <p id="score">Score: 0</p>
+        <p id="timer">Time Left: 30s</p>
+        <div class="memoryGrid" id="memoryGrid"></div>
+        <div id="winMessage" style="display:none;">You Win!</div>
+    </div>
+
+    <div id="envelope" style="display: none;">
+        <button id="clickHereBtn" class="button3D">Click Here</button>
+    </div>
+
+    <div id="letter">
+        <div class="letterContainer">
+            <p>Hi my baby boy, I know you're mad at me and I'm trying to make it up to you because I can't see mera russu ekam itni der tk heheh. Just know that I love you the most, Ekam, and I would do anything for you. You're my greatest blessing and I'm never letting you go ❤️🫂</p>
+        </div>
+    </div>
+
+    <script>
+        const yesBtn = document.getElementById('yesBtn');
+        const noBtn = document.getElementById('noBtn');
+        const introSection = document.getElementById('intro');
+        const memoryGameSection = document.getElementById('memoryGame');
+        const winMessage = document.getElementById('winMessage');
+        const envelopeSection = document.getElementById('envelope');
+        const clickHereBtn = document.getElementById('clickHereBtn');
+        const letterSection = document.getElementById('letter');
+        const memoryGrid = document.getElementById('memoryGrid');
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const gameTime = 30; // Total time in seconds for the game
+
+        let score = 0;
+        let timer;
+        let timeLeft = gameTime;
+        let flippedCards = [];
+        let matchedCards = [];
+        let gameCards = [];
+        let isProcessing = false;
+
+        // Memory Game Cards
+        const cardSymbols = ['❤️', '💘', '🌹', '🍫', '🎁', '💌', '💍', '💐', '🌷'];
+        let cards = [...cardSymbols, ...cardSymbols]; // Duplicate symbols to make pairs
+
+        // Shuffle the cards
+        function shuffleCards() {
+            cards = cards.sort(() => Math.random() - 0.5);
+        }
+
+        // Create the Memory Grid
+        function createMemoryGrid() {
+            memoryGrid.innerHTML = '';
+            shuffleCards();
+
+            cards.forEach((symbol, index) => {
+                const card = document.createElement('div');
+                card.classList.add('memoryCard');
+                card.dataset.symbol = symbol;
+                card.dataset.index = index;
+                card.textContent = '';
+                card.addEventListener('click', () => flipCard(card));
+                memoryGrid.appendChild(card);
+            });
+        }
+
+        // Flip the card
+        function flipCard(card) {
+            if (isProcessing || card.classList.contains('flipped') || matchedCards.includes(card.dataset.index)) return;
+
+            card.textContent = card.dataset.symbol;
+            card.classList.add('flipped');
+            flippedCards.push(card);
+
+            if (flippedCards.length === 2) {
+                isProcessing = true;
+
+                setTimeout(() => {
+                    if (flippedCards[0].dataset.symbol === flippedCards[1].dataset.symbol) {
+                        score++;
+                        matchedCards.push(flippedCards[0].dataset.index, flippedCards[1].dataset.index);
+                        if (score === cardSymbols.length) {
+                            clearInterval(timer);
+                            alert("You Win!");
+                            memoryGameSection.style.display = 'none';
+                            envelopeSection.style.display = 'block';
+                        }
+                    } else {
+                        flippedCards[0].classList.remove('flipped');
+                        flippedCards[1].classList.remove('flipped');
+                        flippedCards[0].textContent = '';
+                        flippedCards[1].textContent = '';
+                    }
+
+                    flippedCards = [];
+                    isProcessing = false;
+                    scoreDisplay.textContent = `Score: `;
+                }, 1000);
+            }
+        }
+
+        // Start the Memory Game
+        function startMemoryGame() {
+            createMemoryGrid();
+
+            timer = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = `Time Left: s`;
+
+                if (timeLeft === 0) {
+                    clearInterval(timer);
+                    memoryGameSection.style.display = 'none';
+                    envelopeSection.style.display = 'block';
+                }
+            }, 1000);
+        }
+
+        yesBtn.addEventListener('click', () => {
+            introSection.style.display = 'none';
+            memoryGameSection.style.display = 'block';
+            startMemoryGame();
+        });
+
+        noBtn.addEventListener('click', () => {
+            noBtn.style.animationPlayState = 'running';
+        });
+
+        clickHereBtn.addEventListener('click', () => {
+            envelopeSection.style.display = 'none';
+            letterSection.style.display = 'block';
+            letterSection.classList.add('open');
+            setTimeout(() => {
+                // Create floating hearts when the letter opens
+                for (let i = 0; i < 10; i++) {
+                    let heart = document.createElement('div');
+                    heart.classList.add('heart');
+                    heart.innerHTML = '❤️';
+                    heart.style.left = `%`;
+                    heart.style.animationDuration = `s`;
+                    document.body.appendChild(heart);
+
+                    // Remove hearts after animation ends
+                    setTimeout(() => {
+                        heart.remove();
+                    }, 3000);
+                }
+            }, 1000);
+        });
+    </script>
+
+</body>
+</html>
